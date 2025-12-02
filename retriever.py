@@ -18,7 +18,6 @@ and truncating text will lead to loss of information
 
 def multimodal_vector_db():
 
-    # create client and a new collection
     chroma_client = chromadb.PersistentClient()
 
     chroma_image_collection = chroma_client.create_collection(
@@ -49,9 +48,10 @@ def embeddings(storage_context, nodes):
         # base_url="http://localhost:11434"
     )
 
-    # Create multimodal index with CLIP for images
     index = MultiModalVectorStoreIndex(
         nodes=nodes,
         storage_context=storage_context,
         image_embed_model=ClipEmbedding(),  # CLIP only for images
     )
+
+    return index

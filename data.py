@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 from huggingface_hub import login
 from tqdm import tqdm
 import os
+import requests
+from io import BytesIO
+import base64
 from PIL import Image
 import io
 import json
@@ -28,9 +31,8 @@ def data_loading(name, split, streaming, size, analysis=False):
     print(f"Loaded {len(samples)} samples")
 
     if analysis:
-        sample = next(iter(samples[0]))
-        print(sample)
-        print(sample.keys())
+        print(samples[0])
+        print(samples[0].keys())
 
     return samples
 
@@ -38,8 +40,38 @@ def data_clean(list):
   data = [element for element in list if element is not None]
   return data
 
-def create_text_nodes():
-    pass
+def create_nodes(corpus):
+    nodes = []
 
-def create_image_nodes():
-    pass
+    for item in corpus:
+        texts = item.get('texts')
+        images = item.get('images')
+        metadata = item.get('metadata')
+
+        if isinstance(metadata, str):
+            metadata = json.loads(metadata)
+        metadata = data_clean(metadata)
+        metadata = metadata[0]
+
+        content = data_clean(texts)
+        content = "\n".join(content)
+
+        text_node = TextNode(text=content, metadata=metadata[0])
+        nodes.append(text_node)
+
+        if images:
+            image_url = data_clean(images)
+            print(image_url)
+            try:
+                image_res = requests.get(image_url[0])
+                image = Image.open(BytesIO(image_res.content)).convert("RGB")
+                copy = io.BytesIO()
+                image.save(copy, format="JPEG")
+                image_base64 = base64.b64encode(copy.getvalue()).decode()
+                image_node = ImageNode(image=image_base64, image_url=image_url[0], image_mimetype="JPEG",
+                                       metadata=metadata[0])
+                nodes.append(image_node)
+            except:
+                print(f"Error processing image")
+
+    return nodes
