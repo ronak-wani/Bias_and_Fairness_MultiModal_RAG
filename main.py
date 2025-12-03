@@ -1,5 +1,5 @@
 from data import data_loading, create_nodes, image_to_base64
-from config import save
+from config import save, create_output_folder
 from prompts import retrieval_prompt, text_prompt, image_prompt, evaluation_prompt
 from retriever import multimodal_vector_db, embeddings
 import tempfile
@@ -23,7 +23,9 @@ class MultiModalRAG:
         self.size = size
         self.total_samples = 0
         self.total_score = 0
-        self.pipeline(self.benchmark)
+        folder_name = create_output_folder()
+        self.pipeline(self.benchmark, folder_name)
+
 
     def text_retrieval(self, retrieval_text_prompt):
         retrieved_texts = []
@@ -86,7 +88,7 @@ class MultiModalRAG:
 
         return eval_result
 
-    def pipeline(self, benchmark):
+    def pipeline(self, benchmark, folder_name):
         for test_sample in benchmark:
             benchmark_context = test_sample.get('context')
             benchmark_question = test_sample.get('question')
@@ -182,7 +184,7 @@ class MultiModalRAG:
                 response = self.mllm.chat(messages)
                 print("Response: ", response)
                 eval_result = self.evaluation(response)
-                save(self.mllm, self.size, self.retrieval_type, messages,response, eval_result,)
+                save(self.mllm, self.size, self.retrieval_type, messages,response, eval_result, folder_name)
 
 if __name__ == "__main__":
     corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 10, False)

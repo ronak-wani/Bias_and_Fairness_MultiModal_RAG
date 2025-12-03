@@ -16,9 +16,8 @@ def create_output_folder():
             return folder_name
         counter += 1
 
-def save(mllm, size, retrieval_type, messages, response, eval_result):
+def save(mllm, size, retrieval_type, messages, response, eval_result, folder_name):
     total_samples:int = 0; total_score:int = 0
-    folder_name = create_output_folder()
 
     score = eval_result.get('score')
 
