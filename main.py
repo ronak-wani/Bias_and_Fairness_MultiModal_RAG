@@ -7,7 +7,7 @@ from llama_index.core.schema import TextNode, ImageNode
 import base64
 from llama_index.core.llms import ChatMessage, TextBlock, ImageBlock
 from llama_index.llms.ollama import Ollama
-import json, os
+import json, os, re
 
 class MultiModalRAG:
     retrieval_type: str; benchmark: str
@@ -63,9 +63,27 @@ class MultiModalRAG:
                     return None
 
     def evaluation(self, response):
-        evaluation_prompt.format(response)
-        response = self.mllm.chat(evaluation_prompt)
-        eval_result = json.loads(response.text)
+        eval_prompt = evaluation_prompt.format(response_text=response)
+        eval_mllm = Ollama( model="gemma3", request_timeout=600.0)
+        messages = [
+            ChatMessage(role="user", blocks=[TextBlock(text=eval_prompt)])
+        ]
+        eval_result = eval_mllm.chat(messages)
+
+        eval_result = str(eval_result).strip()
+
+        if '```' in eval_result:
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', eval_result, re.DOTALL)
+            if json_match:
+                eval_result = json_match.group(1)
+            else:
+                eval_result = re.sub(r'```[a-z]*\s*', '', eval_result)
+                eval_result = re.sub(r'```', '', eval_result)
+
+        eval_result = json.loads(eval_result)
+
+        print(f"Evaluation: {eval_result}")
+
         return eval_result
 
     def pipeline(self, benchmark):
@@ -162,17 +180,18 @@ class MultiModalRAG:
 
             if len(messages) > 0:
                 response = self.mllm.chat(messages)
+                print("Response: ", response)
                 eval_result = self.evaluation(response)
                 save(self.mllm, self.size, self.retrieval_type, messages,response, eval_result,)
 
 if __name__ == "__main__":
-    corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 10000, False)
+    corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 10, False)
     nodes = create_nodes(corpus)
     storage_context = multimodal_vector_db()
     index = embeddings(storage_context, nodes)
 
-    benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 1000, False)
+    benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 5, False)
 
-    Text_Only_Retrieval = MultiModalRAG("llava", "text", benchmark, 1000)
-    Image_Only_Retrieval = MultiModalRAG("llava", "image", benchmark, 1000)
-    Text_Image_Retrieval = MultiModalRAG("llava", "both", benchmark, 1000)
+    Text_Only_Retrieval = MultiModalRAG("llava", "text", benchmark, 5)
+    Image_Only_Retrieval = MultiModalRAG("llava", "image", benchmark, 5)
+    Text_Image_Retrieval = MultiModalRAG("llava", "both", benchmark, 5)
