@@ -71,12 +71,18 @@ def create_nodes(corpus):
 
             for idx, img_url in enumerate(image_urls):
                 try:
-                    image_res = requests.get(img_url, timeout=10)
-                    image_res.raise_for_status()  # Raise exception for bad status codes
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Referer': 'https://www.google.com/'
+                    }
+                    image_res = requests.get(img_url, headers=headers, timeout=10)
                     image = Image.open(BytesIO(image_res.content)).convert("RGB")
                     image_base64 = image_to_base64(image)
                     image_node = ImageNode(image=image_base64, image_url=img_url, image_mimetype="JPEG",
                                            metadata=metadata)
+                    print("Success: " + img_url)
                     nodes.append(image_node)
                 except Exception as e:
                     print(f"✗ Error processing image: {img_url}")

@@ -2,9 +2,6 @@ import chromadb
 from llama_index.core import StorageContext
 from chromadb.utils.data_loaders import ImageLoader
 from llama_index.vector_stores.chroma import ChromaVectorStore
-from chromadb.utils.embedding_functions.ollama_embedding_function import (OllamaEmbeddingFunction)
-from chromadb.utils.embedding_functions import OpenCLIPEmbeddingFunction
-
 from llama_index.core.indices import MultiModalVectorStoreIndex
 from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.embeddings.clip import ClipEmbedding
@@ -22,13 +19,11 @@ def multimodal_vector_db():
 
     chroma_image_collection = chroma_client.create_collection(
         "multimodal-rag-images",
-        embedding_function=OpenCLIPEmbeddingFunction(),
         data_loader=ImageLoader(),
     )
 
     chroma_text_collection = chroma_client.create_collection(
         "multimodal-rag-text",
-        embedding_function= OllamaEmbeddingFunction(model_name="nomic-embed-text"),
     )
 
     image_vector_store = ChromaVectorStore(chroma_collection=chroma_image_collection)
@@ -38,14 +33,17 @@ def multimodal_vector_db():
         vector_store=text_vector_store,
         image_store=image_vector_store
     )
-
+    print("Storage Context Created")
     return storage_context
 
 def embeddings(storage_context, nodes):
 
     Settings.embed_model = OllamaEmbedding(
         model_name="nomic-embed-text",
-        # base_url="http://localhost:11434"
+        base_url="http://localhost:11434",
+        ollama_additional_kwargs={
+            "num_ctx": 512,
+        },
     )
 
     index = MultiModalVectorStoreIndex(
@@ -53,5 +51,7 @@ def embeddings(storage_context, nodes):
         storage_context=storage_context,
         image_embed_model=ClipEmbedding(),  # CLIP only for images
     )
+
+    print("Index Created")
 
     return index
