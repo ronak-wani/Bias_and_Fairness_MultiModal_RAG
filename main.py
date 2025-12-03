@@ -10,12 +10,14 @@ from llama_index.llms.ollama import Ollama
 class MultiModalRAG:
     retrieval_type: str
 
-    def __init__(self, mllm, retrieval_type):
+    def __init__(self, mllm, retrieval_type, benchmark):
         self.mllm = Ollama(
             model=mllm,
             request_timeout=600.0
         )
         self.retrieval_type = retrieval_type
+        self.benchmark = benchmark
+        self.pipeline(self.benchmark)
 
 
     def text_retrieval(self, retrieval_text_prompt):
@@ -66,18 +68,21 @@ class MultiModalRAG:
             ans1 = test_sample.get('ans1')
             ans2 = test_sample.get('ans2')
             benchmark_image_base64 = image_to_base64(benchmark_image)
+
+            retrieval_text_prompt = retrieval_prompt.format(
+                benchmark_context=benchmark_context,
+                benchmark_question=benchmark_question,
+                ans0=ans0,
+                ans1=ans1,
+                ans2=ans2,
+            )
+
             messages = []
 
             match self.retrieval_type:
                 case "text":
-                    retrieval_text_prompt = retrieval_prompt.format(
-                        benchmark_context=benchmark_context,
-                        benchmark_question=benchmark_question,
-                        ans0=ans0,
-                        ans1=ans1,
-                        ans2=ans2,
-                    )
                     context = self.text_retrieval(retrieval_text_prompt)
+
                     Final_MLLM_prompt = text_prompt.format(
                         benchmark_context=benchmark_context,
                         benchmark_question=benchmark_question,
@@ -86,6 +91,7 @@ class MultiModalRAG:
                         ans2=ans2,
                         retrieved_texts=context
                     )
+
                     messages = [
                         ChatMessage(
                             role='user',
@@ -97,14 +103,15 @@ class MultiModalRAG:
                     ]
                 case "image":
                     context = self.image_retrieval(benchmark_image)
+
                     Final_MLLM_prompt = image_prompt.format(
                         benchmark_context=benchmark_context,
                         benchmark_question=benchmark_question,
                         ans0=ans0,
                         ans1=ans1,
                         ans2=ans2,
-                        retrieved_texts=context
                     )
+
                     messages = [
                         ChatMessage(
                             role='user',
@@ -115,11 +122,30 @@ class MultiModalRAG:
                             ],
                         )
                     ]
+
                 case "both":
                     text_context = self.text_retrieval(retrieval_text_prompt)
                     image_context = self.image_retrieval(benchmark_image)
 
-                    context = text_context + image_context
+                    Final_MLLM_prompt = text_prompt.format(
+                        benchmark_context=benchmark_context,
+                        benchmark_question=benchmark_question,
+                        ans0=ans0,
+                        ans1=ans1,
+                        ans2=ans2,
+                        retrieved_texts=text_context
+                    )
+
+                    messages = [
+                        ChatMessage(
+                            role='user',
+                            blocks=[
+                                TextBlock(text=Final_MLLM_prompt),
+                                ImageBlock(image=benchmark_image_base64),
+                                ImageBlock(image=image_context),
+                            ],
+                        )
+                    ]
 
                 case _:
                     messages = []
@@ -135,6 +161,6 @@ if __name__ == "__main__":
 
     benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 1000, False)
 
-    Text_Only_Retrieval = MultiModalRAG("llava", "text")
-    Image_Only_Retrieval = MultiModalRAG("llava", "image")
-    Text_Image_Retrieval = MultiModalRAG("llava", "both")
+    Text_Only_Retrieval = MultiModalRAG("llava", "text", benchmark)
+    Image_Only_Retrieval = MultiModalRAG("llava", "image", benchmark)
+    Text_Image_Retrieval = MultiModalRAG("llava", "both", benchmark)
