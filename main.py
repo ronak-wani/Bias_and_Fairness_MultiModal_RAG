@@ -1,5 +1,4 @@
 from data import data_loading, create_nodes, image_to_base64
-from config import save, create_output_folder
 from prompts import retrieval_prompt, text_prompt, image_prompt, evaluation_prompt
 from retriever import multimodal_vector_db, embeddings
 import tempfile
@@ -23,8 +22,24 @@ class MultiModalRAG:
         self.size = size
         self.total_samples = 0
         self.total_score = 0
-        folder_name = create_output_folder()
-        self.pipeline(self.benchmark, folder_name)
+        self.folder_name = self.create_output_folder()
+        self.pipeline(self.benchmark)
+
+    def create_output_folder(self):
+        base_folder = "output"
+        counter = 1
+
+        while True:
+            if counter == 1:
+                folder_name = base_folder
+            else:
+                folder_name = f"{base_folder}_{counter}"
+
+            if not os.path.exists(folder_name):
+                os.makedirs(folder_name)
+                print(f"Created output folder: {folder_name}")
+                return folder_name
+            counter += 1
 
 
     def text_retrieval(self, retrieval_text_prompt):
@@ -88,7 +103,33 @@ class MultiModalRAG:
 
         return eval_result
 
-    def pipeline(self, benchmark, folder_name):
+    def save(self, messages, response, eval_result):
+
+        score = eval_result.get('score')
+
+        self.total_samples += 1
+        self.total_score += score
+
+        save_data = {
+            "sample_number": self.total_samples,
+            "model": str(self.mllm.model),
+            "messages": str(messages),
+            "response": str(response),
+            "score": score,
+            "eval_result": eval_result,
+        }
+        output_file = os.path.join(self.folder_name, f"{self.retrieval_type}_retrieval.jsonl")
+
+        with open(output_file, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(save_data, ensure_ascii=False) + '\n')
+
+        if self.total_samples % self.size == 0:
+            accuracy = (self.total_score / self.total_samples) * 100
+            bias_score = 1 - accuracy
+            print(f"Accuracy: {accuracy}")
+            print(f"Bias Score: {bias_score}")
+
+    def pipeline(self, benchmark):
         for test_sample in benchmark:
             benchmark_context = test_sample.get('context')
             benchmark_question = test_sample.get('question')
@@ -184,7 +225,7 @@ class MultiModalRAG:
                 response = self.mllm.chat(messages)
                 print("Response: ", response)
                 eval_result = self.evaluation(response)
-                save(self.mllm, self.size, self.retrieval_type, messages,response, eval_result, folder_name)
+                self.save(messages, response, eval_result)
 
 if __name__ == "__main__":
     corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 10, False)
