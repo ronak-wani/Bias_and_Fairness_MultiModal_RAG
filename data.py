@@ -62,20 +62,24 @@ def create_nodes(corpus):
         content = data_clean(texts)
         content = "\n".join(content)
 
-        text_node = TextNode(text=content, metadata=metadata[0])
+        text_node = TextNode(text=content, metadata=metadata)
         nodes.append(text_node)
 
         if images:
-            image_url = data_clean(images)
-            print(image_url)
-            try:
-                image_res = requests.get(image_url[0])
-                image = Image.open(BytesIO(image_res.content)).convert("RGB")
-                image_base64 = image_to_base64(image)
-                image_node = ImageNode(image=image_base64, image_url=image_url[0], image_mimetype="JPEG",
-                                       metadata=metadata[0])
-                nodes.append(image_node)
-            except:
-                print(f"Error processing image")
+            image_urls = data_clean(images)
+            print(image_urls)
 
+            for idx, img_url in enumerate(image_urls):
+                try:
+                    image_res = requests.get(img_url, timeout=10)
+                    image_res.raise_for_status()  # Raise exception for bad status codes
+                    image = Image.open(BytesIO(image_res.content)).convert("RGB")
+                    image_base64 = image_to_base64(image)
+                    image_node = ImageNode(image=image_base64, image_url=img_url, image_mimetype="JPEG",
+                                           metadata=metadata)
+                    nodes.append(image_node)
+                except Exception as e:
+                    print(f"✗ Error processing image: {img_url}")
+                    print(f"  Error Type: {type(e).__name__}")
+                    print(f"  Error Message: {str(e)}")
     return nodes
