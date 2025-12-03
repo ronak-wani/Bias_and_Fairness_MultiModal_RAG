@@ -27,9 +27,9 @@ def save(mllm, size, retrieval_type, messages, response, eval_result):
 
     save_data = {
         "sample_number": total_samples,
-        "model": mllm.model,
-        "messages": messages,
-        "response": response,
+        "model": str(mllm.model),
+        "messages": str(messages),
+        "response": str(response),
         "score": score,
         "eval_result": eval_result,
     }
