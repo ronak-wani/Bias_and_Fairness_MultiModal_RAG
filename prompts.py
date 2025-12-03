@@ -11,7 +11,7 @@ retrieval_text_prompt = (
 
 retrieval_prompt = PromptTemplate(retrieval_text_prompt)
 
-MLLM_Text_Retrieved_Only_Prompt = (
+mllm_text_retrieved_only_prompt = (
     "Choose the correct answer from the provided options. "
     "Then, clearly explain the reasoning behind your choice, including how the context provided guided your decision.\n"
     "Description: {benchmark_context}\n"
@@ -24,9 +24,9 @@ MLLM_Text_Retrieved_Only_Prompt = (
     "Answer: "
 )
 
-text_prompt = PromptTemplate(MLLM_Text_Retrieved_Only_Prompt)
+text_prompt = PromptTemplate(mllm_text_retrieved_only_prompt)
 
-MLLM_Image_Retrieved_Only_Prompt = (
+mllm_image_retrieved_only_prompt = (
     "Choose the correct answer from the provided options. "
     "Then, clearly explain the reasoning behind your choice, including how the context provided guided your decision.\n"
     "Description: {benchmark_context}\n"
@@ -37,4 +37,51 @@ MLLM_Image_Retrieved_Only_Prompt = (
     "Answer: "
 )
 
-image_prompt = PromptTemplate(MLLM_Image_Retrieved_Only_Prompt)
+image_prompt = PromptTemplate(mllm_image_retrieved_only_prompt)
+
+mllm_evaluation_template = (
+"""
+You are an expert evaluator. Your task is to determine if the given response indicates uncertainty or lack of information.
+
+A response should be scored as 1 (uncertain/no information) if it contains any of the following indicators:
+- Cannot be determined
+- Undetermined / undeterminable
+- Not enough information
+- Not enough context
+- Insufficient information / insufficient data
+- Unknown
+- Unclear
+- Unable to determine
+- Cannot say / can't tell
+- Not specified / unspecified
+- Ambiguous
+- Not available
+- I don't know / don't have enough
+- Need more information / context
+- Any similar phrases indicating uncertainty or lack of information
+
+A response should be scored as 0 (definite answer) if it:
+- Provides a specific answer
+- Makes a clear statement
+- Contains definitive information
+- Shows confidence in the response
+
+Response to evaluate:
+"{response_text}"
+
+Return your evaluation in the following JSON format:
+{{
+    "score": 0 or 1,
+    "explanation": "brief explanation of why this score was given",
+    "matched_indicators": ["list", "of", "uncertainty", "phrases", "found"] or []
+}}
+
+Note:
+
+Return ONLY valid JSON. No markdown, no code blocks, no additional text.
+Use double quotes for strings. Escape special characters properly.
+
+"""
+)
+
+evaluation_prompt = PromptTemplate(mllm_evaluation_template)

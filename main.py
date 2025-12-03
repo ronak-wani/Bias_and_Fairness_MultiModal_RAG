@@ -1,24 +1,29 @@
 from data import data_loading, create_nodes, image_to_base64
-from prompts import retrieval_prompt, text_prompt, image_prompt
+from config import save
+from prompts import retrieval_prompt, text_prompt, image_prompt, evaluation_prompt
 from retriever import multimodal_vector_db, embeddings
 import tempfile
 from llama_index.core.schema import TextNode, ImageNode
 import base64
 from llama_index.core.llms import ChatMessage, TextBlock, ImageBlock
 from llama_index.llms.ollama import Ollama
+import json, os
 
 class MultiModalRAG:
-    retrieval_type: str
+    retrieval_type: str; benchmark: str
+    size: int
 
-    def __init__(self, mllm, retrieval_type, benchmark):
+    def __init__(self, mllm, retrieval_type, benchmark, size):
         self.mllm = Ollama(
             model=mllm,
             request_timeout=600.0
         )
         self.retrieval_type = retrieval_type
         self.benchmark = benchmark
+        self.size = size
+        self.total_samples = 0
+        self.total_score = 0
         self.pipeline(self.benchmark)
-
 
     def text_retrieval(self, retrieval_text_prompt):
         retrieved_texts = []
@@ -57,6 +62,11 @@ class MultiModalRAG:
                     print("ImageNode found but no image data available")
                     return None
 
+    def evaluation(self, response):
+        evaluation_prompt.format(response)
+        response = self.mllm.chat(evaluation_prompt)
+        eval_result = json.loads(response.text)
+        return eval_result
 
     def pipeline(self, benchmark):
         for test_sample in benchmark:
@@ -152,6 +162,8 @@ class MultiModalRAG:
 
             if len(messages) > 0:
                 response = self.mllm.chat(messages)
+                eval_result = self.evaluation(response)
+                save(self.mllm, self.size, self.retrieval_type, messages,response, eval_result,)
 
 if __name__ == "__main__":
     corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 10000, False)
@@ -161,6 +173,6 @@ if __name__ == "__main__":
 
     benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 1000, False)
 
-    Text_Only_Retrieval = MultiModalRAG("llava", "text", benchmark)
-    Image_Only_Retrieval = MultiModalRAG("llava", "image", benchmark)
-    Text_Image_Retrieval = MultiModalRAG("llava", "both", benchmark)
+    Text_Only_Retrieval = MultiModalRAG("llava", "text", benchmark, 1000)
+    Image_Only_Retrieval = MultiModalRAG("llava", "image", benchmark, 1000)
+    Text_Image_Retrieval = MultiModalRAG("llava", "both", benchmark, 1000)
