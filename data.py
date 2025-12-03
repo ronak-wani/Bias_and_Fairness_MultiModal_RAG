@@ -22,10 +22,10 @@ def data_loading(name, split, streaming, size, analysis=False):
     dataset = load_dataset(name, split=split, streaming=streaming)
     # Turing only: shards = dataset.shard(num_shards=64, index=0)
 
-    dataset_100 = dataset.take(size)
+    sub_sampled_dataset = dataset.take(size)
 
     samples = []
-    for sample in tqdm(dataset_100, total=size, desc="Loading samples"):
+    for sample in tqdm(sub_sampled_dataset, total=size, desc="Loading samples"):
         samples.append(sample)
 
     print(f"Loaded {len(samples)} samples")
@@ -39,6 +39,12 @@ def data_loading(name, split, streaming, size, analysis=False):
 def data_clean(list):
   data = [element for element in list if element is not None]
   return data
+
+def image_to_base64(image):
+    copy = io.BytesIO()
+    image.save(copy, format="JPEG")
+    image_base64 = base64.b64encode(copy.getvalue()).decode()
+    return image_base64
 
 def create_nodes(corpus):
     nodes = []
@@ -65,9 +71,7 @@ def create_nodes(corpus):
             try:
                 image_res = requests.get(image_url[0])
                 image = Image.open(BytesIO(image_res.content)).convert("RGB")
-                copy = io.BytesIO()
-                image.save(copy, format="JPEG")
-                image_base64 = base64.b64encode(copy.getvalue()).decode()
+                image_base64 = image_to_base64(image)
                 image_node = ImageNode(image=image_base64, image_url=image_url[0], image_mimetype="JPEG",
                                        metadata=metadata[0])
                 nodes.append(image_node)
