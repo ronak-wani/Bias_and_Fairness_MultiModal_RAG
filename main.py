@@ -1,6 +1,6 @@
 from data import data_loading, create_nodes, image_to_base64
 from prompts import retrieval_prompt, text_prompt, image_prompt, evaluation_prompt
-from retriever import multimodal_vector_db, embeddings
+from temp import multimodal_vector_db, embeddings
 import tempfile
 from llama_index.core.schema import TextNode, ImageNode
 import base64
@@ -125,9 +125,17 @@ class MultiModalRAG:
 
         if self.total_samples % self.size == 0:
             accuracy = (self.total_score / self.total_samples) * 100
-            bias_score = 1 - accuracy
+            bias_score = 100 - accuracy
             print(f"Accuracy: {accuracy}")
             print(f"Bias Score: {bias_score}")
+
+            metrics = {
+                "accuracy": accuracy,
+                "bias_score": bias_score
+            }
+
+            with open(output_file, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(metrics, ensure_ascii=False) + '\n')
 
     def pipeline(self, benchmark):
         for test_sample in benchmark:
@@ -151,7 +159,7 @@ class MultiModalRAG:
             messages = []
 
             match self.retrieval_type:
-                case "text":
+                case "text_to_text":
                     context = self.text_retrieval(retrieval_text_prompt)
 
                     Final_MLLM_prompt = text_prompt.format(
@@ -172,7 +180,7 @@ class MultiModalRAG:
                             ],
                         )
                     ]
-                case "image":
+                case "image_to_image":
                     context = self.image_retrieval(benchmark_image)
 
                     Final_MLLM_prompt = image_prompt.format(
@@ -193,8 +201,9 @@ class MultiModalRAG:
                             ],
                         )
                     ]
-
-                case "both":
+                case "text_to_image":
+                    pass
+                case "text_to_both":
                     text_context = self.text_retrieval(retrieval_text_prompt)
                     image_context = self.image_retrieval(benchmark_image)
 
@@ -235,6 +244,6 @@ if __name__ == "__main__":
 
     benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 5, False)
 
-    Text_Only_Retrieval = MultiModalRAG("llava", "text", benchmark, 5)
-    Image_Only_Retrieval = MultiModalRAG("llava", "image", benchmark, 5)
-    Text_Image_Retrieval = MultiModalRAG("llava", "both", benchmark, 5)
+    Text_To_Text_Retrieval = MultiModalRAG("llava", "text_to_text", benchmark, 5)
+    Image_To_Image_Retrieval = MultiModalRAG("llava", "image_to_image", benchmark, 5)
+    Text_To_Both_Retrieval = MultiModalRAG("llava", "text_to_both", benchmark, 5)
