@@ -1,6 +1,6 @@
 from data import data_loading, create_nodes, image_to_base64
 from prompts import retrieval_prompt, text_prompt, image_prompt, evaluation_prompt
-from temp import multimodal_vector_db, embeddings
+from retriever import multimodal_vector_db, embeddings
 import tempfile
 from llama_index.core.schema import TextNode, ImageNode
 import base64
@@ -70,11 +70,9 @@ class MultiModalRAG:
         for res_node in retrieval_image_results:
             if isinstance(res_node.node, ImageNode):
                 print("=== Image Node ===")
-
                 # Check if it has base64 image
                 if hasattr(res_node.node, "image") and res_node.node.image is not None:
-                    retrieved_img_base64 = base64.b64decode(res_node.node.image)
-                    return retrieved_img_base64
+                    return res_node.node.image
                 else:
                     print("ImageNode found but no image data available")
                     return None
@@ -151,6 +149,7 @@ class MultiModalRAG:
             retrieval_text_prompt = retrieval_prompt.format(
                 benchmark_context=benchmark_context,
                 benchmark_question=benchmark_question,
+                benchmark_metadata=benchmark_metadata,
                 ans0=ans0,
                 ans1=ans1,
                 ans2=ans2,
@@ -165,6 +164,7 @@ class MultiModalRAG:
                     Final_MLLM_prompt = text_prompt.format(
                         benchmark_context=benchmark_context,
                         benchmark_question=benchmark_question,
+                        benchmark_metadata=benchmark_metadata,
                         ans0=ans0,
                         ans1=ans1,
                         ans2=ans2,
@@ -182,10 +182,13 @@ class MultiModalRAG:
                     ]
                 case "image_to_image":
                     context = self.image_retrieval(benchmark_image)
+                    print(f"Image data type: {type(context)}")
+                    print(f"Image data length: {len(context) if context else 0}")
 
                     Final_MLLM_prompt = image_prompt.format(
                         benchmark_context=benchmark_context,
                         benchmark_question=benchmark_question,
+                        benchmark_metadata=benchmark_metadata,
                         ans0=ans0,
                         ans1=ans1,
                         ans2=ans2,
@@ -210,6 +213,7 @@ class MultiModalRAG:
                     Final_MLLM_prompt = text_prompt.format(
                         benchmark_context=benchmark_context,
                         benchmark_question=benchmark_question,
+                        benchmark_metadata=benchmark_metadata,
                         ans0=ans0,
                         ans1=ans1,
                         ans2=ans2,
