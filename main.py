@@ -1,5 +1,5 @@
 from data import data_loading, image_to_base64
-from prompts import retrieval_prompt, mllm_prompt, evaluation_prompt
+from prompts import retrieval_prompt, mllm_prompt
 from retriever import multimodal_vector_db
 import tempfile
 from evaluation import Metrics
@@ -7,6 +7,9 @@ from llama_index.core.schema import TextNode, ImageNode
 from llama_index.core.llms import ChatMessage, TextBlock, ImageBlock
 from llama_index.llms.ollama import Ollama
 import json, os, re
+from io import BytesIO
+import base64
+from PIL import Image
 
 
 class MultiModalRAG:
@@ -20,11 +23,10 @@ class MultiModalRAG:
         )
         self.retrieval_type = retrieval_type
         self.benchmark = benchmark
-        self.size = size
         self.total_samples = 0
-        self.total_score = 0
+        self.size = size
 
-        self.metrics = Metrics()
+        self.metrics = Metrics(size)
 
         self.folder_name = self.create_output_folder()
         self.pipeline(self.benchmark)
@@ -76,44 +78,32 @@ class MultiModalRAG:
                     print("ImageNode found but no image data available")
                     return None
 
-    def evaluation(self, response):
-        eval_prompt = evaluation_prompt.format(response_text=response)
-        eval_mllm = Ollama( model="gemma3", request_timeout=600.0)
-        messages = [
-            ChatMessage(role="user", blocks=[TextBlock(text=eval_prompt)])
-        ]
-        eval_result = eval_mllm.chat(messages)
-
-        eval_result = str(eval_result).strip()
-
-        if '```' in eval_result:
-            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', eval_result, re.DOTALL)
-            if json_match:
-                eval_result = json_match.group(1)
-            else:
-                eval_result = re.sub(r'```[a-z]*\s*', '', eval_result)
-                eval_result = re.sub(r'```', '', eval_result)
-
-        eval_result = json.loads(eval_result)
-
-        print(f"Evaluation: {eval_result}")
-
-        return eval_result
-
-    def save(self, messages, response, eval_result):
-
-        score = eval_result.get('score')
+    def save(self, messages, response, score, sum):
 
         self.total_samples += 1
-        self.total_score += score
+
+        texts = []
+        images = []
+
+        for block in messages.blocks:
+            if block.block_type == 'text':
+                texts.append(block.text)
+            elif block.block_type == 'image':
+                img_bytes = base64.b64decode(block.image)
+                pil_img = Image.open(BytesIO(img_bytes))
+                images.append(pil_img)
 
         save_data = {
             "sample_number": self.total_samples,
             "model": str(self.mllm.model),
-            "messages": str(messages),
-            "response": str(response),
+            "messages":
+                {
+                    "prompt": texts,
+                    "images": images,
+                },
+            "choice": response["choice"],
+            "reason": response["Reason"],
             "score": score,
-            "eval_result": eval_result,
         }
         output_file = os.path.join(self.folder_name, f"{self.retrieval_type}_retrieval.jsonl")
 
@@ -121,7 +111,7 @@ class MultiModalRAG:
             f.write(json.dumps(save_data, ensure_ascii=False) + '\n')
 
         if self.total_samples % self.size == 0:
-            accuracy = (self.total_score / self.total_samples) * 100
+            accuracy = (sum / self.total_samples) * 100
             bias_score = 100 - accuracy
             print(f"Accuracy: {accuracy}")
             print(f"Bias Score: {bias_score}")
@@ -252,9 +242,8 @@ class MultiModalRAG:
                     raise ValueError("No JSON object found in the response")
 
                 print("Response: " + response_dict["Choice"])
-                # eval_result = self.evaluation(response)
-                eval_result = self.metrics.exact_match(ground_truth, response_dict["Choice"])
-                self.save(messages, response)
+                score = self.metrics.exact_match(ground_truth, response_dict["Choice"])
+                self.save(messages, response_dict, score)
 
 if __name__ == "__main__":
     index = multimodal_vector_db()
