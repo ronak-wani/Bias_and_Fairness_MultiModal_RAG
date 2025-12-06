@@ -17,12 +17,12 @@ def multimodal_vector_db():
 
     chroma_client = chromadb.PersistentClient()
 
-    chroma_image_collection = chroma_client.create_collection(
+    chroma_image_collection = chroma_client.get_or_create_collection(
         "multimodal-rag-images",
         data_loader=ImageLoader(),
     )
 
-    chroma_text_collection = chroma_client.create_collection(
+    chroma_text_collection = chroma_client.get_or_create_collection(
         "multimodal-rag-text",
     )
 
@@ -37,6 +37,10 @@ def multimodal_vector_db():
     return storage_context
 
 def embeddings(storage_context, nodes):
+    """
+        Splitting nodes into batches to avoid exceeding ChromaDB's batch size limit of 5461
+    """
+    BATCH_SIZE = 5000
 
     Settings.embed_model = OllamaEmbedding(
         model_name="nomic-embed-text",
@@ -46,11 +50,19 @@ def embeddings(storage_context, nodes):
         },
     )
 
-    index = MultiModalVectorStoreIndex(
-        nodes=nodes,
-        storage_context=storage_context,
-        image_embed_model=ClipEmbedding(),  # CLIP only for images
-    )
+    index = None
+
+    for i in range(0, len(nodes), BATCH_SIZE):
+        batch_nodes = nodes[i:i + BATCH_SIZE]
+
+        if index is None:
+            index = MultiModalVectorStoreIndex(
+                nodes=batch_nodes,
+                storage_context=storage_context,
+                image_embed_model=ClipEmbedding(),
+            )
+        else:
+            index.insert_nodes(batch_nodes)
 
     print("Index Created")
 
