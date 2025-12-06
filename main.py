@@ -1,6 +1,6 @@
-from data import data_loading, create_nodes, image_to_base64
+from data import data_loading, image_to_base64
 from prompts import retrieval_prompt, mllm_prompt, evaluation_prompt
-from retriever import multimodal_vector_db, embeddings
+from retriever import multimodal_vector_db
 import tempfile
 from evaluation import Metrics
 from llama_index.core.schema import TextNode, ImageNode
@@ -23,9 +23,11 @@ class MultiModalRAG:
         self.size = size
         self.total_samples = 0
         self.total_score = 0
+
+        self.metrics = Metrics()
+
         self.folder_name = self.create_output_folder()
         self.pipeline(self.benchmark)
-        self.metrics = Metrics()
 
     def create_output_folder(self):
         folder_name = f"{self.mllm.model}_output"
