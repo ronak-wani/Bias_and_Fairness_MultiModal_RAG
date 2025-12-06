@@ -15,4 +15,10 @@ class Metrics:
         )
         self.exact_match_sum += result
         print(f"Exact Match Score: {result.value}")
-        return result.value
+        eval ={
+                "score": result.value,
+                "sum": self.exact_match_sum,
+            }
+        return eval
+
+## Positive stereotype (non-neg) and Negative stereotype (neg)

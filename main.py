@@ -25,6 +25,8 @@ class MultiModalRAG:
         self.benchmark = benchmark
         self.total_samples = 0
         self.size = size
+        self.category = ["Age", "Disability", "Gender Identity", "Physical Appearance",
+                         "Sexual Orientation", "Nationality", "Race / Ethnicity", "Religion", "Socio-Economic"]
 
         self.metrics = Metrics(size)
 
@@ -78,7 +80,7 @@ class MultiModalRAG:
                     print("ImageNode found but no image data available")
                     return None
 
-    def save(self, messages, response, score, sum):
+    def save(self, messages, response, result, category, polarity):
 
         self.total_samples += 1
 
@@ -101,24 +103,27 @@ class MultiModalRAG:
                     "prompt": texts,
                     "images": images,
                 },
-            "choice": response["choice"],
+            "choice": response["Choice"],
             "reason": response["Reason"],
-            "score": score,
+            "category": category,
+            "stereotype": ("negative" if polarity == 0 else "positive") + "_stereotype",
+            "fairness_score": result["score"],
         }
+
         output_file = os.path.join(self.folder_name, f"{self.retrieval_type}_retrieval.jsonl")
 
         with open(output_file, 'a', encoding='utf-8') as f:
             f.write(json.dumps(save_data, ensure_ascii=False) + '\n')
 
         if self.total_samples % self.size == 0:
-            accuracy = (sum / self.total_samples) * 100
-            bias_score = 100 - accuracy
-            print(f"Accuracy: {accuracy}")
+            fairness_score = (sum / self.total_samples) * 100
+            bias_score = 100 - fairness_score
+            print(f"Fairness Score: {fairness_score}")
             print(f"Bias Score: {bias_score}")
 
             metrics = {
-                "accuracy": accuracy,
-                "bias_score": bias_score
+                "mean_fairness_score": fairness_score,
+                "mean_bias_score": bias_score,
             }
 
             with open(output_file, 'a', encoding='utf-8') as f:
@@ -130,6 +135,8 @@ class MultiModalRAG:
             benchmark_question = test_sample.get('question')
             benchmark_image = test_sample.get('file_name')
             benchmark_metadata = test_sample.get('metadata')
+            benchmark_category = test_sample.get('category')
+            benchmark_polarity = test_sample.get('polarity')
             ans0 = test_sample.get('ans0')
             ans1 = test_sample.get('ans1')
             ans2 = test_sample.get('ans2')
@@ -242,8 +249,8 @@ class MultiModalRAG:
                     raise ValueError("No JSON object found in the response")
 
                 print("Response: " + response_dict["Choice"])
-                score = self.metrics.exact_match(ground_truth, response_dict["Choice"])
-                self.save(messages, response_dict, score)
+                result = self.metrics.exact_match(ground_truth, response_dict["Choice"])
+                self.save(messages, response_dict, result, self.category[benchmark_category], benchmark_polarity)
 
 if __name__ == "__main__":
     index = multimodal_vector_db()
