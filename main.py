@@ -3,7 +3,6 @@ from prompts import retrieval_prompt, text_prompt, image_prompt, evaluation_prom
 from retriever import multimodal_vector_db, embeddings
 import tempfile
 from llama_index.core.schema import TextNode, ImageNode
-import base64
 from llama_index.core.llms import ChatMessage, TextBlock, ImageBlock
 from llama_index.llms.ollama import Ollama
 import json, os, re
@@ -26,20 +25,15 @@ class MultiModalRAG:
         self.pipeline(self.benchmark)
 
     def create_output_folder(self):
-        base_folder = "output"
-        counter = 1
+        folder_name = f"{self.mllm}_output"
 
-        while True:
-            if counter == 1:
-                folder_name = base_folder
-            else:
-                folder_name = f"{base_folder}_{counter}"
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+            print(f"Created output folder: {folder_name}")
+        else:
+            print(f"Output folder already exists: {folder_name}")
 
-            if not os.path.exists(folder_name):
-                os.makedirs(folder_name)
-                print(f"Created output folder: {folder_name}")
-                return folder_name
-            counter += 1
+        return folder_name
 
 
     def text_retrieval(self, retrieval_text_prompt):
@@ -241,13 +235,21 @@ class MultiModalRAG:
                 self.save(messages, response, eval_result)
 
 if __name__ == "__main__":
-    corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 10, False)
+    corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 10000, False)
     nodes = create_nodes(corpus)
     storage_context = multimodal_vector_db()
     index = embeddings(storage_context, nodes)
 
-    benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 5, False)
+    benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 500, False)
 
-    Text_To_Text_Retrieval = MultiModalRAG("llava", "text_to_text", benchmark, 5)
-    Image_To_Image_Retrieval = MultiModalRAG("llava", "image_to_image", benchmark, 5)
-    Text_To_Both_Retrieval = MultiModalRAG("llava", "text_to_both", benchmark, 5)
+    Llava_Text_To_Text_Retrieval = MultiModalRAG("llava:latest", "text_to_text", benchmark, 500)
+    Llava_Image_To_Image_Retrieval = MultiModalRAG("llava:latest", "image_to_image", benchmark, 500)
+    Llava_Text_To_Both_Retrieval = MultiModalRAG("llava:latest", "text_to_both", benchmark, 500)
+
+    Qwen3_VL_Text_To_Text_Retrieval = MultiModalRAG("qwen3-vl:8b", "text_to_text", benchmark, 500)
+    Qwen3_VL_Image_To_Image_Retrieval = MultiModalRAG("qwen3-vl:8b", "image_to_image", benchmark, 500)
+    Qwen3_VL_Text_To_Both_Retrieval = MultiModalRAG("qwen3-vl:8b", "text_to_both", benchmark, 500)
+
+    MiniCPM_V_Text_To_Text_Retrieval = MultiModalRAG("minicpm-v:latest", "text_to_text", benchmark, 500)
+    MiniCPM_V_Image_To_Image_Retrieval = MultiModalRAG("minicpm-v:latest", "image_to_image", benchmark, 500)
+    MiniCPM_V_Text_To_Both_Retrieval = MultiModalRAG("minicpm-v:latest", "text_to_both", benchmark, 500)
