@@ -7,6 +7,8 @@ from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.embeddings.clip import ClipEmbedding
 from llama_index.core import Settings
 
+from data import data_loading, create_nodes
+
 """
 Using two different vector stores for images and text
 because CLIP Model is limited to only 76 tokens
@@ -34,13 +36,9 @@ def multimodal_vector_db():
         image_store=image_vector_store
     )
     print("Storage Context Created")
-    return storage_context
 
-def embeddings(storage_context, nodes):
-    """
-        Splitting nodes into batches to avoid exceeding ChromaDB's batch size limit of 5461
-    """
-    BATCH_SIZE = 5000
+    text_count = chroma_text_collection.count()
+    image_count = chroma_image_collection.count()
 
     Settings.embed_model = OllamaEmbedding(
         model_name="nomic-embed-text",
@@ -50,20 +48,38 @@ def embeddings(storage_context, nodes):
         },
     )
 
-    index = None
+    if text_count == 0 and image_count == 0:
+        corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 10, False)
+        nodes = create_nodes(corpus)
 
-    for i in range(0, len(nodes), BATCH_SIZE):
-        batch_nodes = nodes[i:i + BATCH_SIZE]
+        """
+        Splitting nodes into batches to avoid exceeding ChromaDB's batch size limit of 5461
+        """
 
-        if index is None:
-            index = MultiModalVectorStoreIndex(
-                nodes=batch_nodes,
-                storage_context=storage_context,
-                image_embed_model=ClipEmbedding(),
-            )
-        else:
-            index.insert_nodes(batch_nodes)
+        batch_size = 5000
 
-    print("Index Created")
+        index = None
+
+        for i in range(0, len(nodes), batch_size):
+            batch_nodes = nodes[i:i + batch_size]
+
+            if index is None:
+                index = MultiModalVectorStoreIndex(
+                    nodes=batch_nodes,
+                    storage_context=storage_context,
+                    image_embed_model=ClipEmbedding(),
+                )
+            else:
+                index.insert_nodes(batch_nodes)
+
+        print("Index Created")
+
+    else:
+        index = MultiModalVectorStoreIndex.from_vector_store(
+            vector_store=text_vector_store,
+            image_vector_store=image_vector_store,
+            image_embed_model=ClipEmbedding(),
+        )
+        print("Existing index loaded")
 
     return index

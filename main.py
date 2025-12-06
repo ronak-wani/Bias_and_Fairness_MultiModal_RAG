@@ -1,11 +1,13 @@
 from data import data_loading, create_nodes, image_to_base64
-from prompts import retrieval_prompt, text_prompt, image_prompt, evaluation_prompt
+from prompts import retrieval_prompt, mllm_prompt, evaluation_prompt
 from retriever import multimodal_vector_db, embeddings
 import tempfile
+from evaluation import Metrics
 from llama_index.core.schema import TextNode, ImageNode
 from llama_index.core.llms import ChatMessage, TextBlock, ImageBlock
 from llama_index.llms.ollama import Ollama
 import json, os, re
+
 
 class MultiModalRAG:
     retrieval_type: str; benchmark: str
@@ -23,6 +25,7 @@ class MultiModalRAG:
         self.total_score = 0
         self.folder_name = self.create_output_folder()
         self.pipeline(self.benchmark)
+        self.metrics = Metrics()
 
     def create_output_folder(self):
         folder_name = f"{self.mllm.model}_output"
@@ -138,6 +141,14 @@ class MultiModalRAG:
             ans0 = test_sample.get('ans0')
             ans1 = test_sample.get('ans1')
             ans2 = test_sample.get('ans2')
+            correct_ans_index = test_sample.get('label')
+            answers = {
+                0: ans0,
+                1: ans1,
+                2: ans2
+            }
+            ground_truth = answers[correct_ans_index]
+
             benchmark_image_base64 = image_to_base64(benchmark_image)
 
             retrieval_text_prompt = retrieval_prompt.format(
@@ -155,22 +166,22 @@ class MultiModalRAG:
                 case "text_to_text":
                     context = self.text_retrieval(retrieval_text_prompt)
 
-                    Final_MLLM_prompt = text_prompt.format(
+                    final_mllm_prompt = mllm_prompt.format(
                         benchmark_context=benchmark_context,
                         benchmark_question=benchmark_question,
                         benchmark_metadata=benchmark_metadata,
                         ans0=ans0,
                         ans1=ans1,
                         ans2=ans2,
-                        retrieved_texts=context
                     )
 
                     messages = [
                         ChatMessage(
                             role='user',
                             blocks=[
-                                TextBlock(text=Final_MLLM_prompt),
-                                ImageBlock(image=benchmark_image_base64)
+                                TextBlock(text=final_mllm_prompt),
+                                ImageBlock(image=benchmark_image_base64),
+                                TextBlock(text=str(context)),
                             ],
                         )
                     ]
@@ -179,7 +190,7 @@ class MultiModalRAG:
                     print(f"Image data type: {type(context)}")
                     print(f"Image data length: {len(context) if context else 0}")
 
-                    Final_MLLM_prompt = image_prompt.format(
+                    final_mllm_prompt = mllm_prompt.format(
                         benchmark_context=benchmark_context,
                         benchmark_question=benchmark_question,
                         benchmark_metadata=benchmark_metadata,
@@ -192,7 +203,7 @@ class MultiModalRAG:
                         ChatMessage(
                             role='user',
                             blocks=[
-                                TextBlock(text=Final_MLLM_prompt),
+                                TextBlock(text=final_mllm_prompt),
                                 ImageBlock(image=benchmark_image_base64),
                                 ImageBlock(image=context),
                             ],
@@ -202,23 +213,23 @@ class MultiModalRAG:
                     text_context = self.text_retrieval(retrieval_text_prompt)
                     image_context = self.image_retrieval(benchmark_image)
 
-                    Final_MLLM_prompt = text_prompt.format(
+                    final_mllm_prompt = mllm_prompt.format(
                         benchmark_context=benchmark_context,
                         benchmark_question=benchmark_question,
                         benchmark_metadata=benchmark_metadata,
                         ans0=ans0,
                         ans1=ans1,
                         ans2=ans2,
-                        retrieved_texts=text_context
                     )
 
                     messages = [
                         ChatMessage(
                             role='user',
                             blocks=[
-                                TextBlock(text=Final_MLLM_prompt),
+                                TextBlock(text=final_mllm_prompt),
                                 ImageBlock(image=benchmark_image_base64),
                                 ImageBlock(image=image_context),
+                                TextBlock(text=str(text_context)),
                             ],
                         )
                     ]
@@ -229,25 +240,33 @@ class MultiModalRAG:
             if len(messages) > 0:
                 response = self.mllm.chat(messages)
                 print("Response: ", response)
-                eval_result = self.evaluation(response)
-                self.save(messages, response, eval_result)
+                response = str(response).strip()
+
+                json_match = re.search(r'(\{.*\})', response, re.DOTALL)
+                if json_match:
+                    response_json_str = json_match.group(1)
+                    response_dict = json.loads(response_json_str)
+                else:
+                    raise ValueError("No JSON object found in the response")
+
+                print("Response: " + response_dict["Choice"])
+                # eval_result = self.evaluation(response)
+                eval_result = self.metrics.exact_match(ground_truth, response_dict["Choice"])
+                self.save(messages, response)
 
 if __name__ == "__main__":
-    corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 10000, False)
-    nodes = create_nodes(corpus)
-    storage_context = multimodal_vector_db()
-    index = embeddings(storage_context, nodes)
+    index = multimodal_vector_db()
 
-    benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 1000, False)
+    benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 5, False)
 
-    Llava_Text_To_Text_Retrieval = MultiModalRAG("llava:latest", "text_to_text", benchmark, 1000)
-    Llava_Image_To_Image_Retrieval = MultiModalRAG("llava:latest", "image_to_image", benchmark, 1000)
-    Llava_Both_To_Both_Retrieval = MultiModalRAG("llava:latest", "both_to_both", benchmark, 1000)
+    Llava_Text_To_Text_Retrieval = MultiModalRAG("llava:latest", "text_to_text", benchmark, 5)
+    Llava_Image_To_Image_Retrieval = MultiModalRAG("llava:latest", "image_to_image", benchmark, 5)
+    Llava_Both_To_Both_Retrieval = MultiModalRAG("llava:latest", "both_to_both", benchmark, 5)
 
-    Qwen3_VL_Text_To_Text_Retrieval = MultiModalRAG("qwen3-vl:8b", "text_to_text", benchmark, 1000)
-    Qwen3_VL_Image_To_Image_Retrieval = MultiModalRAG("qwen3-vl:8b", "image_to_image", benchmark, 1000)
-    Qwen3_VL_Both_To_Both_Retrieval = MultiModalRAG("qwen3-vl:8b", "both_to_both", benchmark, 1000)
+    Qwen3_VL_Text_To_Text_Retrieval = MultiModalRAG("qwen3-vl:8b", "text_to_text", benchmark, 5)
+    Qwen3_VL_Image_To_Image_Retrieval = MultiModalRAG("qwen3-vl:8b", "image_to_image", benchmark, 5)
+    Qwen3_VL_Both_To_Both_Retrieval = MultiModalRAG("qwen3-vl:8b", "both_to_both", benchmark, 5)
 
-    MiniCPM_V_Text_To_Text_Retrieval = MultiModalRAG("minicpm-v:latest", "text_to_text", benchmark, 1000)
-    MiniCPM_V_Image_To_Image_Retrieval = MultiModalRAG("minicpm-v:latest", "image_to_image", benchmark, 1000)
-    MiniCPM_V_Both_To_Both_Retrieval = MultiModalRAG("minicpm-v:latest", "both_to_both", benchmark, 1000)
+    MiniCPM_V_Text_To_Text_Retrieval = MultiModalRAG("minicpm-v:latest", "text_to_text", benchmark, 5)
+    MiniCPM_V_Image_To_Image_Retrieval = MultiModalRAG("minicpm-v:latest", "image_to_image", benchmark, 5)
+    MiniCPM_V_Both_To_Both_Retrieval = MultiModalRAG("minicpm-v:latest", "both_to_both", benchmark, 5)
