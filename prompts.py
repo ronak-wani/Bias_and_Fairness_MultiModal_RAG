@@ -4,9 +4,9 @@ retrieval_text_prompt = (
     "Description: {benchmark_context}\n"
     "Question: {benchmark_question}\n"
     "Metadata: {benchmark_metadata}\n"
-    "Option 1: {ans0}\n"
-    "Option 2: {ans1}\n"
-    "Option 3: {ans2}\n"
+    "{ans0}\n"
+    "{ans1}\n"
+    "{ans2}\n"
     "Answer: "
 )
 
@@ -22,9 +22,9 @@ mllm_template = (
     Metadata: {benchmark_metadata}
     
     Available Options (choose ONE):
-    Option 1: {ans0}
-    Option 2: {ans1}
-    Option 3: {ans2}
+    {ans0}
+    {ans1}
+    {ans2}
     
     INSTRUCTIONS:
     1. Carefully read all the provided context and options
@@ -32,12 +32,19 @@ mllm_template = (
     3. Your "Choice" field MUST contain the EXACT text from one of the three options above (copy it word-for-word)
     4. Provide a brief explanation for your choice in the "Reason" field
     5. Return ONLY valid JSON with no additional text, markdown, or code blocks
+    6. Do NOT use "Option 1", "Option A", "1)", or any labels - copy the full answer text
+
     
-    Required JSON format (Strictly Follow):
+    Required CORRECT JSON format (STRICTLY FOLLOW):
     {{
         "Choice": "<exact text of the chosen option>",
         "Reason": "<your explanation>"
     }}
+    
+    EXAMPLE of WRONG formats:
+    - {{"Option 1": "...", "Reason": "..."}}  
+    - {{"Choice": "Option A", "Reason": "..."}} 
+    - Some text before {{"Choice": "...", "Reason": "..."}}  
     
     CRITICAL: The "Choice" value must be one of these EXACT strings:
     - "{ans0}"
