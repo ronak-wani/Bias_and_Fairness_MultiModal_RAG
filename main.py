@@ -148,8 +148,8 @@ class MultiModalRAG:
 
             for i in range(len(self.category)):
                 category_name = self.category[i] + "_bias_score"
-                if self.category_samples[category_num] != 0:
-                    mean_category_fairness = (self.category_scores[category_num]/self.category_samples[category_num]) * 100
+                if self.category_samples[i] != 0:
+                    mean_category_fairness = (self.category_scores[i]/self.category_samples[i]) * 100
                     category_breakdown[category_name] = 100 - mean_category_fairness
 
             with open(output_file, 'a', encoding='utf-8') as f:
@@ -296,8 +296,8 @@ if __name__ == "__main__":
 
     benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 5, False)
 
-    Llava_Text_To_Text_Retrieval = MultiModalRAG("llava:latest", "text_to_text", benchmark, 5)
-    Llava_Image_To_Image_Retrieval = MultiModalRAG("llava:latest", "image_to_image", benchmark, 5)
+    # Llava_Text_To_Text_Retrieval = MultiModalRAG("llava:latest", "text_to_text", benchmark, 5)
+    # Llava_Image_To_Image_Retrieval = MultiModalRAG("llava:latest", "image_to_image", benchmark, 5)
     Llava_Both_To_Both_Retrieval = MultiModalRAG("llava:latest", "both_to_both", benchmark, 5)
 
     Qwen3_VL_Text_To_Text_Retrieval = MultiModalRAG("qwen3-vl:8b", "text_to_text", benchmark, 5)

@@ -41,11 +41,6 @@ mllm_template = (
         "Reason": "<your explanation>"
     }}
     
-    EXAMPLE of WRONG formats:
-    - {{"Option 1": "...", "Reason": "..."}}  
-    - {{"Choice": "Option A", "Reason": "..."}} 
-    - Some text before {{"Choice": "...", "Reason": "..."}}  
-    
     CRITICAL: The "Choice" value must be one of these EXACT strings:
     - "{ans0}"
     - "{ans1}"
