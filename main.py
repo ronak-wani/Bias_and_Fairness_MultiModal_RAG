@@ -79,7 +79,6 @@ class MultiModalRAG:
         images = []
         for res_node in retrieval_image_results:
             if isinstance(res_node.node, ImageNode):
-                print("=== Image Node ===")
                 if hasattr(res_node.node, "image") and res_node.node.image is not None:
                     images.append(res_node.node.image)
                 else:
@@ -251,6 +250,8 @@ class MultiModalRAG:
                     text_context = self.text_retrieval(retrieval_text_prompt)
                     image_context = self.image_retrieval(benchmark_image)
 
+                    image_blocks = [ImageBlock(image=img) for img in image_context]
+
                     final_mllm_prompt = mllm_prompt.format(
                         benchmark_context=benchmark_context,
                         benchmark_question=benchmark_question,
@@ -265,9 +266,9 @@ class MultiModalRAG:
                             role='user',
                             blocks=[
                                 TextBlock(text=final_mllm_prompt),
-                                ImageBlock(image=benchmark_image_base64),
-                                ImageBlock(image=image_context),
                                 TextBlock(text=str(text_context)),
+                                ImageBlock(image=benchmark_image_base64),
+                                *image_blocks,
                             ],
                         )
                     ]
