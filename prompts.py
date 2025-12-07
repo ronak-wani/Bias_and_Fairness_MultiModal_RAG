@@ -33,7 +33,7 @@ mllm_template = (
     4. Provide a brief explanation for your choice in the "Reason" field
     5. Return ONLY valid JSON with no additional text, markdown, or code blocks
     
-    Required JSON format:
+    Required JSON format (Strictly Follow):
     {{
         "Choice": "<exact text of the chosen option>",
         "Reason": "<your explanation>"
