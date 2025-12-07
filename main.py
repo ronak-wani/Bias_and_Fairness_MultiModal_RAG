@@ -106,13 +106,14 @@ class MultiModalRAG:
             self.positive_samples += 1
             self.positive_score += int(result["score"])
 
-        for block in messages.blocks:
-            if block.block_type == 'text':
-                texts.append(block.text)
-            elif block.block_type == 'image':
-                img_bytes = base64.b64decode(block.image)
-                pil_img = Image.open(BytesIO(img_bytes))
-                images.append(pil_img)
+        for message in messages:
+            for block in message.blocks:
+                if block.block_type == 'text':
+                    texts.append(block.text)
+                elif block.block_type == 'image':
+                    img_bytes = base64.b64decode(block.image)
+                    pil_img = Image.open(BytesIO(img_bytes))
+                    images.append(pil_img)
 
         save_data = {
             "sample_number": self.total_samples,
@@ -120,7 +121,7 @@ class MultiModalRAG:
             "messages":
                 {
                     "prompt": texts,
-                    "images": images,
+                    "images": str(images),
                 },
             "choice": response["Choice"],
             "reason": response["Reason"],
