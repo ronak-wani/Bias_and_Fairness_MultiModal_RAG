@@ -173,7 +173,6 @@ class MultiModalRAG:
             benchmark_context = test_sample.get('context')
             benchmark_question = test_sample.get('question')
             benchmark_image = test_sample.get('file_name')
-            benchmark_metadata = test_sample.get('metadata')
             benchmark_category = test_sample.get('category')
             benchmark_polarity = test_sample.get('polarity')
             ans0 = test_sample.get('ans0')
@@ -192,7 +191,6 @@ class MultiModalRAG:
             retrieval_text_prompt = retrieval_prompt.format(
                 benchmark_context=benchmark_context,
                 benchmark_question=benchmark_question,
-                benchmark_metadata=benchmark_metadata,
                 ans0=ans0,
                 ans1=ans1,
                 ans2=ans2,
@@ -207,7 +205,6 @@ class MultiModalRAG:
                     final_mllm_prompt = mllm_prompt.format(
                         benchmark_context=benchmark_context,
                         benchmark_question=benchmark_question,
-                        benchmark_metadata=benchmark_metadata,
                         ans0=ans0,
                         ans1=ans1,
                         ans2=ans2,
@@ -231,7 +228,6 @@ class MultiModalRAG:
                     final_mllm_prompt = mllm_prompt.format(
                         benchmark_context=benchmark_context,
                         benchmark_question=benchmark_question,
-                        benchmark_metadata=benchmark_metadata,
                         ans0=ans0,
                         ans1=ans1,
                         ans2=ans2,
@@ -256,7 +252,6 @@ class MultiModalRAG:
                     final_mllm_prompt = mllm_prompt.format(
                         benchmark_context=benchmark_context,
                         benchmark_question=benchmark_question,
-                        benchmark_metadata=benchmark_metadata,
                         ans0=ans0,
                         ans1=ans1,
                         ans2=ans2,
@@ -303,12 +298,12 @@ if __name__ == "__main__":
 
     # Llava_Text_To_Text_Retrieval = MultiModalRAG("llava:latest", "text_to_text", benchmark, 5)
     # Llava_Image_To_Image_Retrieval = MultiModalRAG("llava:latest", "image_to_image", benchmark, 5)
-    Llava_Both_To_Both_Retrieval = MultiModalRAG("llava:latest", "both_to_both", benchmark, 5)
+    # Llava_Both_To_Both_Retrieval = MultiModalRAG("llava:latest", "both_to_both", benchmark, 5)
 
-    Qwen3_VL_Text_To_Text_Retrieval = MultiModalRAG("qwen3-vl:8b", "text_to_text", benchmark, 5)
-    Qwen3_VL_Image_To_Image_Retrieval = MultiModalRAG("qwen3-vl:8b", "image_to_image", benchmark, 5)
-    Qwen3_VL_Both_To_Both_Retrieval = MultiModalRAG("qwen3-vl:8b", "both_to_both", benchmark, 5)
+    # MiniCPM_V_Text_To_Text_Retrieval = MultiModalRAG("minicpm-v:latest", "text_to_text", benchmark, 5)
+    # MiniCPM_V_Image_To_Image_Retrieval = MultiModalRAG("minicpm-v:latest", "image_to_image", benchmark, 5)
+    # MiniCPM_V_Both_To_Both_Retrieval = MultiModalRAG("minicpm-v:latest", "both_to_both", benchmark, 5)
 
-    MiniCPM_V_Text_To_Text_Retrieval = MultiModalRAG("minicpm-v:latest", "text_to_text", benchmark, 5)
-    MiniCPM_V_Image_To_Image_Retrieval = MultiModalRAG("minicpm-v:latest", "image_to_image", benchmark, 5)
-    MiniCPM_V_Both_To_Both_Retrieval = MultiModalRAG("minicpm-v:latest", "both_to_both", benchmark, 5)
+    Qwen3_VL_Text_To_Text_Retrieval = MultiModalRAG("qwen3-vl:4b", "text_to_text", benchmark, 5)
+    Qwen3_VL_Image_To_Image_Retrieval = MultiModalRAG("qwen3-vl:4b", "image_to_image", benchmark, 5)
+    Qwen3_VL_Both_To_Both_Retrieval = MultiModalRAG("qwen3-vl:4b", "both_to_both", benchmark, 5)

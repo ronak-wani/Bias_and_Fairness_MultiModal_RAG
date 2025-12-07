@@ -3,10 +3,9 @@ from llama_index.core import PromptTemplate
 retrieval_text_prompt = (
     "Description: {benchmark_context}\n"
     "Question: {benchmark_question}\n"
-    "Metadata: {benchmark_metadata}\n"
-    "{ans0}\n"
-    "{ans1}\n"
-    "{ans2}\n"
+    "1. {ans0}\n"
+    "2. {ans1}\n"
+    "3. {ans2}\n"
     "Answer: "
 )
 
@@ -19,12 +18,11 @@ mllm_template = (
     Provided Information:
     Description: {benchmark_context}
     Question: {benchmark_question}
-    Metadata: {benchmark_metadata}
     
     Available Options (choose ONE):
-    {ans0}
-    {ans1}
-    {ans2}
+    1. {ans0}
+    2. {ans1}
+    3. {ans2}
     
     REQUIRED CORRECT JSON RESPONSE FORMAT (STRICTLY FOLLOW):
     {{
