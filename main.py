@@ -19,7 +19,7 @@ class MultiModalRAG:
     def __init__(self, mllm, retrieval_type, benchmark, size):
         self.mllm = Ollama(
             model=mllm,
-            request_timeout=900.0
+            request_timeout=1800.0
         )
         self.retrieval_type = retrieval_type
         self.benchmark = benchmark
@@ -294,16 +294,16 @@ class MultiModalRAG:
 if __name__ == "__main__":
     index = multimodal_vector_db()
 
-    benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 5, False)
+    benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 14600, False)
 
-    # Llava_Text_To_Text_Retrieval = MultiModalRAG("llava:latest", "text_to_text", benchmark, 5)
-    # Llava_Image_To_Image_Retrieval = MultiModalRAG("llava:latest", "image_to_image", benchmark, 5)
-    # Llava_Both_To_Both_Retrieval = MultiModalRAG("llava:latest", "both_to_both", benchmark, 5)
+    Llava_Text_To_Text_Retrieval = MultiModalRAG("llava:latest", "text_to_text", benchmark, 14600)
+    Llava_Image_To_Image_Retrieval = MultiModalRAG("llava:latest", "image_to_image", benchmark, 14600)
+    Llava_Both_To_Both_Retrieval = MultiModalRAG("llava:latest", "both_to_both", benchmark, 14600)
 
-    # MiniCPM_V_Text_To_Text_Retrieval = MultiModalRAG("minicpm-v:latest", "text_to_text", benchmark, 5)
-    # MiniCPM_V_Image_To_Image_Retrieval = MultiModalRAG("minicpm-v:latest", "image_to_image", benchmark, 5)
-    # MiniCPM_V_Both_To_Both_Retrieval = MultiModalRAG("minicpm-v:latest", "both_to_both", benchmark, 5)
+    MiniCPM_V_Text_To_Text_Retrieval = MultiModalRAG("minicpm-v:latest", "text_to_text", benchmark, 14600)
+    MiniCPM_V_Image_To_Image_Retrieval = MultiModalRAG("minicpm-v:latest", "image_to_image", benchmark, 14600)
+    MiniCPM_V_Both_To_Both_Retrieval = MultiModalRAG("minicpm-v:latest", "both_to_both", benchmark, 14600)
 
-    Qwen3_VL_Text_To_Text_Retrieval = MultiModalRAG("qwen3-vl:2b", "text_to_text", benchmark, 5)
-    Qwen3_VL_Image_To_Image_Retrieval = MultiModalRAG("qwen3-vl:2b", "image_to_image", benchmark, 5)
-    Qwen3_VL_Both_To_Both_Retrieval = MultiModalRAG("qwen3-vl:2b", "both_to_both", benchmark, 5)
+    Qwen3_VL_Text_To_Text_Retrieval = MultiModalRAG("qwen3-vl:2b", "text_to_text", benchmark, 14600)
+    Qwen3_VL_Image_To_Image_Retrieval = MultiModalRAG("qwen3-vl:2b", "image_to_image", benchmark, 14600)
+    Qwen3_VL_Both_To_Both_Retrieval = MultiModalRAG("qwen3-vl:2b", "both_to_both", benchmark, 14600)
