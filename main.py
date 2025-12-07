@@ -130,6 +130,7 @@ class MultiModalRAG:
             "category": self.category[category_num],
             "stereotype": ("negative" if polarity == 0 else "positive") + "_stereotype",
             "fairness_score": result["score"],
+            "mllm_invalid_responses": self.mllm.invalid_responses,
         }
 
         output_file = os.path.join(self.folder_name, f"{self.retrieval_type}_retrieval.jsonl")
