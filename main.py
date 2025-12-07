@@ -19,7 +19,7 @@ class MultiModalRAG:
     def __init__(self, mllm, retrieval_type, benchmark, size):
         self.mllm = Ollama(
             model=mllm,
-            request_timeout=600.0
+            request_timeout=900.0
         )
         self.retrieval_type = retrieval_type
         self.benchmark = benchmark
@@ -304,6 +304,6 @@ if __name__ == "__main__":
     # MiniCPM_V_Image_To_Image_Retrieval = MultiModalRAG("minicpm-v:latest", "image_to_image", benchmark, 5)
     # MiniCPM_V_Both_To_Both_Retrieval = MultiModalRAG("minicpm-v:latest", "both_to_both", benchmark, 5)
 
-    Qwen3_VL_Text_To_Text_Retrieval = MultiModalRAG("qwen3-vl:4b", "text_to_text", benchmark, 5)
-    Qwen3_VL_Image_To_Image_Retrieval = MultiModalRAG("qwen3-vl:4b", "image_to_image", benchmark, 5)
-    Qwen3_VL_Both_To_Both_Retrieval = MultiModalRAG("qwen3-vl:4b", "both_to_both", benchmark, 5)
+    Qwen3_VL_Text_To_Text_Retrieval = MultiModalRAG("qwen3-vl:2b", "text_to_text", benchmark, 5)
+    Qwen3_VL_Image_To_Image_Retrieval = MultiModalRAG("qwen3-vl:2b", "image_to_image", benchmark, 5)
+    Qwen3_VL_Both_To_Both_Retrieval = MultiModalRAG("qwen3-vl:2b", "both_to_both", benchmark, 5)
