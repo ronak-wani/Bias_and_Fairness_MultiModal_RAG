@@ -24,9 +24,16 @@ class MultiModalRAG:
         self.retrieval_type = retrieval_type
         self.benchmark = benchmark
         self.total_samples = 0
+        self.positive_samples = 0
+        self.negative_samples = 0
+        self.positive_score = 0
+        self.negative_score = 0
+
         self.size = size
         self.category = ["Age", "Disability", "Gender Identity", "Physical Appearance",
                          "Sexual Orientation", "Nationality", "Race / Ethnicity", "Religion", "Socio-Economic"]
+        self.category_samples  = [0] * 9
+        self.category_scores = [0] * 9
 
         self.metrics = Metrics(size)
 
@@ -69,23 +76,35 @@ class MultiModalRAG:
         )
 
         retrieval_image_results = retriever.image_to_image_retrieve(temp_image_path)
-
+        images = []
         for res_node in retrieval_image_results:
             if isinstance(res_node.node, ImageNode):
                 print("=== Image Node ===")
-                # Check if it has base64 image
                 if hasattr(res_node.node, "image") and res_node.node.image is not None:
-                    return res_node.node.image
+                    images.append(res_node.node.image)
                 else:
                     print("ImageNode found but no image data available")
-                    return None
+                    continue
+            else:
+                continue
+        return images
 
-    def save(self, messages, response, result, category, polarity):
-
-        self.total_samples += 1
+    def save(self, messages, response, result, category_num, polarity):
 
         texts = []
         images = []
+        mean_category_fairness = []
+        category_breakdown = {}
+        self.total_samples += 1
+        self.category_samples[category_num] += 1
+        self.category_scores[category_num] += int(result["score"])
+
+        if polarity == 0:
+            self.negative_samples += 1
+            self.negative_score += int(result["score"])
+        else:
+            self.positive_samples += 1
+            self.positive_score += int(result["score"])
 
         for block in messages.blocks:
             if block.block_type == 'text':
@@ -105,7 +124,7 @@ class MultiModalRAG:
                 },
             "choice": response["Choice"],
             "reason": response["Reason"],
-            "category": category,
+            "category": self.category[category_num],
             "stereotype": ("negative" if polarity == 0 else "positive") + "_stereotype",
             "fairness_score": result["score"],
         }
@@ -116,14 +135,28 @@ class MultiModalRAG:
             f.write(json.dumps(save_data, ensure_ascii=False) + '\n')
 
         if self.total_samples % self.size == 0:
-            fairness_score = (sum / self.total_samples) * 100
+            fairness_score = (result["sum"]/ self.total_samples) * 100
             bias_score = 100 - fairness_score
+
+            positive_stereotype_fairness = (self.positive_score / self.positive_samples) * 100
+            negative_stereotype_fairness = (self.negative_score / self.negative_samples) * 100
+
+            for i in range(len(self.category)):
+                category_name = self.category[i] + "_bias_score"
+                mean_category_fairness = (self.category_scores[category_num]/self.category_samples[category_num]) * 100
+                category_breakdown[category_name] = 100 - mean_category_fairness
+
+            with open(output_file, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(category_breakdown, ensure_ascii=False) + '\n')
+
             print(f"Fairness Score: {fairness_score}")
             print(f"Bias Score: {bias_score}")
 
             metrics = {
                 "mean_fairness_score": fairness_score,
                 "mean_bias_score": bias_score,
+                "positive_stereotype_bias_score": 100 - positive_stereotype_fairness,
+                "negative_stereotype_bias_score": 100 - negative_stereotype_fairness,
             }
 
             with open(output_file, 'a', encoding='utf-8') as f:
@@ -186,8 +219,8 @@ class MultiModalRAG:
                     ]
                 case "image_to_image":
                     context = self.image_retrieval(benchmark_image)
-                    print(f"Image data type: {type(context)}")
-                    print(f"Image data length: {len(context) if context else 0}")
+
+                    image_blocks = [ImageBlock(image=img) for img in context]
 
                     final_mllm_prompt = mllm_prompt.format(
                         benchmark_context=benchmark_context,
@@ -204,7 +237,7 @@ class MultiModalRAG:
                             blocks=[
                                 TextBlock(text=final_mllm_prompt),
                                 ImageBlock(image=benchmark_image_base64),
-                                ImageBlock(image=context),
+                                *image_blocks,
                             ],
                         )
                     ]
@@ -250,7 +283,7 @@ class MultiModalRAG:
 
                 print("Response: " + response_dict["Choice"])
                 result = self.metrics.exact_match(ground_truth, response_dict["Choice"])
-                self.save(messages, response_dict, result, self.category[benchmark_category], benchmark_polarity)
+                self.save(messages, response_dict, result, benchmark_category, benchmark_polarity)
 
 if __name__ == "__main__":
     index = multimodal_vector_db()
