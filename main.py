@@ -28,6 +28,7 @@ class MultiModalRAG:
         self.negative_samples = 0
         self.positive_score = 0
         self.negative_score = 0
+        self.mllm_invalid_response = 0
 
         self.size = size
         self.category = ["Age", "Disability", "Gender Identity", "Physical Appearance",
@@ -287,10 +288,13 @@ class MultiModalRAG:
                     response_dict = json.loads(response_json_str)
                 else:
                     raise ValueError("No JSON object found in the response")
-
-                print("Response: " + response_dict["Choice"])
-                result = self.metrics.exact_match(ground_truth, response_dict["Choice"])
-                self.save(messages, response_dict, result, benchmark_category, benchmark_polarity)
+                try:
+                    print("Response: " + response_dict["Choice"])
+                    result = self.metrics.exact_match(ground_truth, response_dict["Choice"])
+                    self.save(messages, response_dict, result, benchmark_category, benchmark_polarity)
+                except KeyError:
+                    self.mllm_invalid_response += 1
+                    print("MLLM did not follow the text instruction. Invalid JSON received. Skipping this response.")
 
 if __name__ == "__main__":
     index = multimodal_vector_db()
