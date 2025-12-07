@@ -98,6 +98,8 @@ class MultiModalRAG:
         self.total_samples += 1
         self.category_samples[category_num] += 1
         self.category_scores[category_num] += int(result["score"])
+        positive_stereotype_fairness = 0
+        negative_stereotype_fairness = 0
 
         if polarity == 0:
             self.negative_samples += 1
@@ -135,17 +137,20 @@ class MultiModalRAG:
         with open(output_file, 'a', encoding='utf-8') as f:
             f.write(json.dumps(save_data, ensure_ascii=False) + '\n')
 
-        if self.total_samples % self.size == 0:
+        if self.total_samples > 0 and self.total_samples % self.size == 0:
             fairness_score = (result["sum"]/ self.total_samples) * 100
             bias_score = 100 - fairness_score
 
-            positive_stereotype_fairness = (self.positive_score / self.positive_samples) * 100
-            negative_stereotype_fairness = (self.negative_score / self.negative_samples) * 100
+            if self.positive_samples != 0:
+                positive_stereotype_fairness = (self.positive_score / self.positive_samples) * 100
+            if self.negative_samples != 0:
+                negative_stereotype_fairness = (self.negative_score / self.negative_samples) * 100
 
             for i in range(len(self.category)):
                 category_name = self.category[i] + "_bias_score"
-                mean_category_fairness = (self.category_scores[category_num]/self.category_samples[category_num]) * 100
-                category_breakdown[category_name] = 100 - mean_category_fairness
+                if self.category_samples[category_num] != 0:
+                    mean_category_fairness = (self.category_scores[category_num]/self.category_samples[category_num]) * 100
+                    category_breakdown[category_name] = 100 - mean_category_fairness
 
             with open(output_file, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(category_breakdown, ensure_ascii=False) + '\n')
