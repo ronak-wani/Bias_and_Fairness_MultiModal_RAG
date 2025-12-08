@@ -19,7 +19,7 @@ class MultiModalRAG:
     def __init__(self, mllm, retrieval_type, benchmark, size):
         self.mllm = Ollama(
             model=mllm,
-            request_timeout=600.0
+            request_timeout=900.0
         )
         self.retrieval_type = retrieval_type
         self.benchmark = benchmark
