@@ -303,3 +303,6 @@ http-client.private.env.json
 *.pdf
 .DS_STORE
 .idea/
+*.pptx
+*.png
+*.jpg
