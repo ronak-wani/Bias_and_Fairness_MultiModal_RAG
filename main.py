@@ -93,7 +93,6 @@ class MultiModalRAG:
 
         texts = []
         images = []
-        mean_category_fairness = []
         category_breakdown = {}
         self.total_samples += 1
         self.category_samples[category_num] += 1
