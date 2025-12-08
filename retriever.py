@@ -50,7 +50,7 @@ def multimodal_vector_db():
     )
 
     if text_count == 0 and image_count == 0:
-        corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 10000, False)
+        corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 50000, False)
         nodes = create_nodes(corpus)
         print(f"Total nodes created: {len(nodes)}")
         print(f"Text nodes: {sum(1 for n in nodes if isinstance(n, TextNode))}")
@@ -60,7 +60,7 @@ def multimodal_vector_db():
         Splitting nodes into batches to avoid exceeding ChromaDB's batch size limit of 5461
         """
 
-        batch_size = 5000
+        batch_size = 1000
         total_batches = (len(nodes) + batch_size - 1) // batch_size
         index = None
 

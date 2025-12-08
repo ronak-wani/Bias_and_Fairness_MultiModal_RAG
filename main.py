@@ -197,19 +197,19 @@ class MultiModalRAG:
                 ans2=ans2,
             )
 
+            final_mllm_prompt = mllm_prompt.format(
+                benchmark_context=benchmark_context,
+                benchmark_question=benchmark_question,
+                ans0=ans0,
+                ans1=ans1,
+                ans2=ans2,
+            )
+
             messages = []
 
             match self.retrieval_type:
                 case "text_to_text":
                     context = self.text_retrieval(retrieval_text_prompt)
-
-                    final_mllm_prompt = mllm_prompt.format(
-                        benchmark_context=benchmark_context,
-                        benchmark_question=benchmark_question,
-                        ans0=ans0,
-                        ans1=ans1,
-                        ans2=ans2,
-                    )
 
                     messages = [
                         ChatMessage(
@@ -226,14 +226,6 @@ class MultiModalRAG:
 
                     image_blocks = [ImageBlock(image=img) for img in context]
 
-                    final_mllm_prompt = mllm_prompt.format(
-                        benchmark_context=benchmark_context,
-                        benchmark_question=benchmark_question,
-                        ans0=ans0,
-                        ans1=ans1,
-                        ans2=ans2,
-                    )
-
                     messages = [
                         ChatMessage(
                             role='user',
@@ -249,14 +241,6 @@ class MultiModalRAG:
                     image_context = self.image_retrieval(benchmark_image)
 
                     image_blocks = [ImageBlock(image=img) for img in image_context]
-
-                    final_mllm_prompt = mllm_prompt.format(
-                        benchmark_context=benchmark_context,
-                        benchmark_question=benchmark_question,
-                        ans0=ans0,
-                        ans1=ans1,
-                        ans2=ans2,
-                    )
 
                     messages = [
                         ChatMessage(
