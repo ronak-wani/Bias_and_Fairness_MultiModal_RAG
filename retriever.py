@@ -49,7 +49,7 @@ def multimodal_vector_db():
     )
 
     if text_count == 0 and image_count == 0:
-        corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 50000, False)
+        corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 1000, False)
         nodes = create_nodes(corpus)
 
         """

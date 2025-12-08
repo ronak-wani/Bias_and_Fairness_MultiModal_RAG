@@ -1,12 +1,10 @@
 import asyncio
-
 import aiohttp
 from datasets import load_dataset
 from dotenv import load_dotenv
 from huggingface_hub import login
 from tqdm import tqdm
 import os
-import requests
 from io import BytesIO
 import base64
 from PIL import Image
@@ -76,7 +74,6 @@ def create_nodes(corpus):
 
 
 async def fetch_and_process_image(session, img_url, metadata):
-    """Fetch and process a single image asynchronously"""
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
@@ -119,19 +116,15 @@ async def process_images_async(images, metadata, max_concurrent=100):
     image_urls = data_clean(images)
     print(image_urls)
 
-    # Create a single session for all requests (connection pooling)
     connector = aiohttp.TCPConnector(limit=max_concurrent, limit_per_host=5)
     async with aiohttp.ClientSession(connector=connector) as session:
-        # Create tasks for all images
         tasks = [
             fetch_and_process_image(session, img_url, metadata)
             for img_url in image_urls
         ]
 
-        # Process all tasks concurrently
         results = await asyncio.gather(*tasks, return_exceptions=False)
 
-        # Filter out None values (failed downloads)
         nodes = [node for node in results if node is not None]
 
     return nodes
