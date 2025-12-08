@@ -170,6 +170,7 @@ class MultiModalRAG:
                 f.write(json.dumps(metrics, ensure_ascii=False) + '\n')
 
     def pipeline(self, benchmark):
+        max_retries = 3
         for test_sample in benchmark:
             benchmark_context = test_sample.get('context')
             benchmark_question = test_sample.get('question')
@@ -258,30 +259,53 @@ class MultiModalRAG:
                     messages = []
 
             if len(messages) > 0:
-                response = self.mllm.chat(messages)
-                print("Response: ", response)
-                response = str(response).strip()
+                for attempt in range(max_retries):
+                    try:
+                        response = self.mllm.chat(messages)
+                        print("Response: ", response)
+                        response = str(response).strip()
 
-                json_match = re.search(r'(\{.*\})', response, re.DOTALL)
-                if json_match:
-                    response_json_str = json_match.group(1)
-                    response_dict = json.loads(response_json_str)
-                else:
-                    raise ValueError("No JSON object found in the response")
-                try:
-                    print("Response: " + response_dict["Choice"])
-                    result = self.metrics.exact_match(ground_truth, response_dict["Choice"])
-                    self.save(messages, response_dict, result, benchmark_category, benchmark_polarity)
-                except KeyError:
-                    self.mllm_invalid_response += 1
-                    print("MLLM did not follow the text instruction. Invalid JSON received. Skipping this response.")
+                        json_match = re.search(r'(\{.*\})', response, re.DOTALL)
+
+                        if not json_match:
+                            if '{' in response and response.count('{') > response.count('}'):
+                                print(f"Attempting to fix incomplete JSON (attempt {attempt}/{max_retries})")
+                                response = response + '}'
+                                json_match = re.search(r'(\{.*\})', response, re.DOTALL)
+
+                        if not json_match:
+                            raise ValueError(f"No JSON object found in response (attempt {attempt}/{max_retries})")
+
+                        response_json_str = json_match.group(1)
+                        response_dict = json.loads(response_json_str)
+
+                        if "Choice" not in response_dict:
+                            raise KeyError(f"Missing 'Choice' key in response (attempt {attempt}/{max_retries})")
+                        print("Response: " + response_dict["Choice"])
+                        result = self.metrics.exact_match(ground_truth, response_dict["Choice"])
+                        self.save(messages, response_dict, result, benchmark_category, benchmark_polarity)
+
+                        break
+
+                    except Exception as e:
+                        self.mllm_invalid_response += 1
+
+                        if attempt < max_retries - 1:
+                            print(f"✗ Error: {type(e).__name__}: {e}")
+                            print(f"  Retrying ({attempt}/{max_retries})...")
+                            continue
+                        else:
+                            print(f"✗ Failed after {max_retries} attempts: {type(e).__name__}: {e}")
+                            print("  Skipping this sample.")
+                            break
+
 
 if __name__ == "__main__":
     index = multimodal_vector_db()
 
     benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 250, False)
 
-    Llava_Text_To_Text_Retrieval = MultiModalRAG("llava:latest", "text_to_text", benchmark, 250)
+    # Llava_Text_To_Text_Retrieval = MultiModalRAG("llava:latest", "text_to_text", benchmark, 250)
     Llava_Image_To_Image_Retrieval = MultiModalRAG("llava:latest", "image_to_image", benchmark, 250)
     Llava_Both_To_Both_Retrieval = MultiModalRAG("llava:latest", "both_to_both", benchmark, 250)
 
