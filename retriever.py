@@ -1,12 +1,13 @@
 import chromadb
 from llama_index.core import StorageContext
 from chromadb.utils.data_loaders import ImageLoader
+from llama_index.core.schema import TextNode, ImageNode
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.core.indices import MultiModalVectorStoreIndex
 from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.embeddings.clip import ClipEmbedding
 from llama_index.core import Settings
-
+from tqdm import tqdm
 from data import data_loading, create_nodes
 
 """
@@ -49,18 +50,24 @@ def multimodal_vector_db():
     )
 
     if text_count == 0 and image_count == 0:
-        corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 1000, False)
+        corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 10000, False)
         nodes = create_nodes(corpus)
+        print(f"Total nodes created: {len(nodes)}")
+        print(f"Text nodes: {sum(1 for n in nodes if isinstance(n, TextNode))}")
+        print(f"Image nodes: {sum(1 for n in nodes if isinstance(n, ImageNode))}")
 
         """
         Splitting nodes into batches to avoid exceeding ChromaDB's batch size limit of 5461
         """
 
         batch_size = 5000
-
+        total_batches = (len(nodes) + batch_size - 1) // batch_size
         index = None
 
-        for i in range(0, len(nodes), batch_size):
+        for i in tqdm(range(0, len(nodes), batch_size),
+                      total=total_batches,
+                      desc="Creating index batches",
+                      unit="batch"):
             batch_nodes = nodes[i:i + batch_size]
 
             if index is None:

@@ -11,6 +11,7 @@ from PIL import Image
 import io
 import json
 from llama_index.core.schema import TextNode, ImageNode
+from tqdm.asyncio import tqdm
 load_dotenv()
 
 def data_loading(name, split, streaming, size, analysis=False):
@@ -50,6 +51,7 @@ def image_to_base64(image):
 def create_nodes(corpus):
     text_nodes = []
     nodes = []
+    all_image_tasks = []
 
     for item in corpus:
         texts = item.get('texts')
@@ -67,9 +69,15 @@ def create_nodes(corpus):
         text_node = TextNode(text=content, metadata=metadata)
         text_nodes.append(text_node)
 
-        image_nodes = process_images_sync(images, metadata)
-        nodes = text_nodes + image_nodes
+        if images:
+            image_urls = data_clean(images)
+            for img_url in image_urls:
+                all_image_tasks.append((img_url, metadata))
 
+    print(f"\nProcessing {len(all_image_tasks)} total images concurrently...")
+    image_nodes = process_images_batch(all_image_tasks)
+
+    nodes = text_nodes + image_nodes
     return nodes
 
 
@@ -109,26 +117,25 @@ async def fetch_and_process_image(session, img_url, metadata):
         return None
 
 
-async def process_images_async(images, metadata, max_concurrent=100):
-    if not images:
-        return []
-
-    image_urls = data_clean(images)
-    print(image_urls)
+async def process_images_batch_async(image_tasks, max_concurrent=100):
 
     connector = aiohttp.TCPConnector(limit=max_concurrent, limit_per_host=5)
+
     async with aiohttp.ClientSession(connector=connector) as session:
         tasks = [
             fetch_and_process_image(session, img_url, metadata)
-            for img_url in image_urls
+            for img_url, metadata in image_tasks
         ]
 
-        results = await asyncio.gather(*tasks, return_exceptions=False)
-
+        results = await tqdm.gather(*tasks, desc="Processing all images", total=len(tasks))
         nodes = [node for node in results if node is not None]
 
     return nodes
 
-def process_images_sync(images, metadata):
-    """Synchronous wrapper for async image processing"""
-    return asyncio.run(process_images_async(images, metadata))
+
+def process_images_batch(image_tasks):
+
+    if not image_tasks:
+        return []
+
+    return asyncio.run(process_images_batch_async(image_tasks))
