@@ -41,13 +41,15 @@ def multimodal_vector_db():
     text_count = chroma_text_collection.count()
     image_count = chroma_image_collection.count()
 
-    Settings.embed_model = OllamaEmbedding(
+    text_embed_model = OllamaEmbedding(
         model_name="nomic-embed-text",
         base_url="http://localhost:11434",
         ollama_additional_kwargs={
             "num_ctx": 512,
         },
     )
+
+    Settings.embed_model = text_embed_model
 
     if text_count == 0 and image_count == 0:
         corpus = data_loading("HuggingFaceM4/OBELICS", "train", True, 50000, False)
@@ -74,6 +76,7 @@ def multimodal_vector_db():
                 index = MultiModalVectorStoreIndex(
                     nodes=batch_nodes,
                     storage_context=storage_context,
+                    embed_model=text_embed_model,
                     image_embed_model=ClipEmbedding(),
                 )
             else:
@@ -83,8 +86,9 @@ def multimodal_vector_db():
 
     else:
         index = MultiModalVectorStoreIndex.from_vector_store(
-            vector_store=text_vector_store,
+            text_vector_store=text_vector_store,
             image_vector_store=image_vector_store,
+            embed_model=text_embed_model,
             image_embed_model=ClipEmbedding(),
         )
         print("Existing index loaded")
