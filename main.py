@@ -279,16 +279,16 @@ class MultiModalRAG:
 if __name__ == "__main__":
     index = multimodal_vector_db()
 
-    benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 100, False)
+    benchmark = data_loading("ucf-crcv/SB-Bench", "real", True, 250, False)
 
-    Llava_Text_To_Text_Retrieval = MultiModalRAG("llava:latest", "text_to_text", benchmark, 100)
-    Llava_Image_To_Image_Retrieval = MultiModalRAG("llava:latest", "image_to_image", benchmark, 100)
-    Llava_Both_To_Both_Retrieval = MultiModalRAG("llava:latest", "both_to_both", benchmark, 100)
+    Llava_Text_To_Text_Retrieval = MultiModalRAG("llava:latest", "text_to_text", benchmark, 250)
+    Llava_Image_To_Image_Retrieval = MultiModalRAG("llava:latest", "image_to_image", benchmark, 250)
+    Llava_Both_To_Both_Retrieval = MultiModalRAG("llava:latest", "both_to_both", benchmark, 250)
 
-    MiniCPM_V_Text_To_Text_Retrieval = MultiModalRAG("minicpm-v:latest", "text_to_text", benchmark, 100)
-    MiniCPM_V_Image_To_Image_Retrieval = MultiModalRAG("minicpm-v:latest", "image_to_image", benchmark, 100)
-    MiniCPM_V_Both_To_Both_Retrieval = MultiModalRAG("minicpm-v:latest", "both_to_both", benchmark, 100)
+    MiniCPM_V_Text_To_Text_Retrieval = MultiModalRAG("minicpm-v:latest", "text_to_text", benchmark, 250)
+    MiniCPM_V_Image_To_Image_Retrieval = MultiModalRAG("minicpm-v:latest", "image_to_image", benchmark, 250)
+    MiniCPM_V_Both_To_Both_Retrieval = MultiModalRAG("minicpm-v:latest", "both_to_both", benchmark, 250)
 
-    Qwen3_VL_Text_To_Text_Retrieval = MultiModalRAG("qwen3-vl:2b", "text_to_text", benchmark, 100)
-    Qwen3_VL_Image_To_Image_Retrieval = MultiModalRAG("qwen3-vl:2b", "image_to_image", benchmark, 100)
-    Qwen3_VL_Both_To_Both_Retrieval = MultiModalRAG("qwen3-vl:2b", "both_to_both", benchmark, 100)
+    Qwen3_VL_Text_To_Text_Retrieval = MultiModalRAG("qwen3-vl:2b", "text_to_text", benchmark, 250)
+    Qwen3_VL_Image_To_Image_Retrieval = MultiModalRAG("qwen3-vl:2b", "image_to_image", benchmark, 250)
+    Qwen3_VL_Both_To_Both_Retrieval = MultiModalRAG("qwen3-vl:2b", "both_to_both", benchmark, 250)
