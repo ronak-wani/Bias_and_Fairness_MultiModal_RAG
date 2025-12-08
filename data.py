@@ -1,3 +1,6 @@
+import asyncio
+
+import aiohttp
 from datasets import load_dataset
 from dotenv import load_dotenv
 from huggingface_hub import login
@@ -47,6 +50,7 @@ def image_to_base64(image):
     return image_base64
 
 def create_nodes(corpus):
+    text_nodes = []
     nodes = []
 
     for item in corpus:
@@ -63,29 +67,75 @@ def create_nodes(corpus):
         content = "\n".join(content)
 
         text_node = TextNode(text=content, metadata=metadata)
-        nodes.append(text_node)
+        text_nodes.append(text_node)
 
-        if images:
-            image_urls = data_clean(images)
-            print(image_urls)
+        image_nodes = process_images_sync(images, metadata)
+        nodes = text_nodes + image_nodes
 
-            for idx, img_url in enumerate(image_urls):
-                try:
-                    headers = {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-                        'Accept-Language': 'en-US,en;q=0.9',
-                        'Referer': 'https://www.google.com/'
-                    }
-                    image_res = requests.get(img_url, headers=headers, timeout=10)
-                    image = Image.open(BytesIO(image_res.content)).convert("RGB")
-                    image_base64 = image_to_base64(image)
-                    image_node = ImageNode(image=image_base64, image_url=img_url, image_mimetype="JPEG",
-                                           metadata=metadata)
-                    print("Success: " + img_url)
-                    nodes.append(image_node)
-                except Exception as e:
-                    print(f"✗ Error processing image: {img_url}")
-                    print(f"  Error Type: {type(e).__name__}")
-                    print(f"  Error Message: {str(e)}")
     return nodes
+
+
+async def fetch_and_process_image(session, img_url, metadata):
+    """Fetch and process a single image asynchronously"""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.google.com/'
+    }
+
+    try:
+        async with session.get(img_url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+            response.raise_for_status()
+            content = await response.read()
+
+            loop = asyncio.get_event_loop()
+            image = await loop.run_in_executor(
+                None,
+                lambda: Image.open(BytesIO(content)).convert("RGB")
+            )
+            image_base64 = await loop.run_in_executor(None, image_to_base64, image)
+
+            image_node = ImageNode(
+                image=image_base64,
+                image_url=img_url,
+                image_mimetype="JPEG",
+                metadata=metadata
+            )
+            print("Success: " + img_url)
+            return image_node
+
+    except Exception as e:
+        print(f"✗ Error processing image: {img_url}")
+        print(f"  Error Type: {type(e).__name__}")
+        print(f"  Error Message: {str(e)}")
+        return None
+
+
+async def process_images_async(images, metadata, max_concurrent=100):
+    if not images:
+        return []
+
+    image_urls = data_clean(images)
+    print(image_urls)
+
+    # Create a single session for all requests (connection pooling)
+    connector = aiohttp.TCPConnector(limit=max_concurrent, limit_per_host=5)
+    async with aiohttp.ClientSession(connector=connector) as session:
+        # Create tasks for all images
+        tasks = [
+            fetch_and_process_image(session, img_url, metadata)
+            for img_url in image_urls
+        ]
+
+        # Process all tasks concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=False)
+
+        # Filter out None values (failed downloads)
+        nodes = [node for node in results if node is not None]
+
+    return nodes
+
+def process_images_sync(images, metadata):
+    """Synchronous wrapper for async image processing"""
+    return asyncio.run(process_images_async(images, metadata))
