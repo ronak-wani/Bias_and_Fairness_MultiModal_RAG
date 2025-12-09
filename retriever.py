@@ -86,7 +86,7 @@ def multimodal_vector_db():
 
     else:
         index = MultiModalVectorStoreIndex.from_vector_store(
-            text_vector_store=text_vector_store,
+            vector_store=text_vector_store,
             image_vector_store=image_vector_store,
             embed_model=text_embed_model,
             image_embed_model=ClipEmbedding(),
